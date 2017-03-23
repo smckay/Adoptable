@@ -7,7 +7,20 @@
         $(document).ready(function(){
                 var email = getUrlVars()["email"];
                 var key = getUrlVars()["key"];
-                $.post('/verify', {email, key});
+                $.post('/verify', {email:email, key:key}, function(data) {
+                	console.log(data);
+                	if (data.error || data.status == 'error') {
+                		alert("Error: " + data.error);
+                	} else {
+//                		window.location = 'feed.html';
+                	}
+                })
+                .done(function() {
+                	console.log("Request sent...");
+                })
+                .fail(function(err) {
+                	alert("Error: " + err);
+                });
         });
 
         function getUrlVars(){
