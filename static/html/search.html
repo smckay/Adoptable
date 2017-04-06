@@ -9,7 +9,7 @@
     <meta name="author" content="">
     <link rel="icon" href="../../favicon.ico">
 
-    <title>Login</title>
+    <title>Delete</title>
 
     <!-- Bootstrap core CSS -->
     <link href="/css/bootstrap.min.css" rel="stylesheet">
@@ -18,7 +18,7 @@
     <link href="/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="/css/login.css" rel="stylesheet">
+    <link href="/css/delete.css" rel="stylesheet">
 
     <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
     <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
@@ -39,28 +39,44 @@
 			location.href = "register.html";
 		}
 
-		function login() {
-			var username = $("#username").val();
-			var password = $("#password").val();
+		function search() {
+			data = {
+				timestamp: $('#timestamp').val(),
+				limit: $('#limit').val(),
+				q: $('#q').val(),
+				username: $('#username').val(),
+				following: $('#following')[0].checked,
+			}
+			console.log(data);
 
-			console.log(username);
-			console.log(password);
-
-			$.post('/login', 
-				{username: username, password: password},
-				function(data) {
-					if (data.error) {
-						alert("ERROR: " + data.error);
-					} else {
-						window.location = "feed.html";
-					}
+			$.ajax({
+				data: data,
+				url: '/search',
+				type: 'POST',
+				fail: function(err) {
+					alert(err);
+				}
+			})
+			.done(function(data) {
+				if (data.error) {
+					alert("ERROR: " + data.error);
+				} else {
+					//window.location = "feed.html";
+					alert(JSON.stringify(data));
+				}
+			});
+					
+/*
+			$.delete('/item/' + id, 
+				{},
 			})
 			.done(function() {
-				console.log("Attempting to login...");
+				console.log("Attempting to delete...");
 			})
 			.fail(function(err) {
 				alert(err);
 			});
+			*/
 		}
 	</script>
   </head>
@@ -70,14 +86,18 @@
     <div class="container">
 
       <form class="form-signin" action="/login" method="post">
-        <h2 class="form-signin-heading">Log in</h2>
-        <label for="inputUsername" class="sr-only">Username</label>
-        <input type="username" id="username" class="form-control" name="username" placeholder="Username" required autofocus>
-        <label for="inputPassword" class="sr-only">Password</label>
-        <input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
-        <!--<button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>-->
-        <input type="button" class="btn btn-lg btn-primary btn-block" onclick="login()" value="Sign in"></input>
-        <button class="btn btn-block" type="button" onclick="redirect()">Create an Account</button>
+        <h2 class="form-signin-heading">Search</h2>
+        <label for="timestamp" class="sr-only">Timestamp</label>
+        <input type="text" id="timestamp" class="form-control" name="id" placeholder="Timestamp" required autofocus>
+        <label for="limit" class="sr-only">Limit</label>
+        <input type="text" id="limit" class="form-control" name="id" placeholder="Limit" required autofocus>
+        <label for="q" class="sr-only">Query</label>
+        <input type="text" id="q" class="form-control" name="id" placeholder="Query" required autofocus>
+        <label for="username" class="sr-only">Username</label>
+        <input type="text" id="username" class="form-control" name="id" placeholder="Username" required autofocus>
+        <label for="following" class="sr-only">Following</label>
+        <input type="checkbox" id="following" class="form-control" name="id" placeholder="Following" required autofocus>
+        <input type="button" class="btn btn-lg btn-primary btn-block" onclick="search()" value="Search"></input>
       </form>
 
     </div> <!-- /container -->
