@@ -246,18 +246,19 @@ app.post('/logout', function(req, res) {
 	res.send(SUCCESS);
 });
 
-app.post('/like', function(req, res) {
+app.post('/item/:id/like', function(req, res) {
 	console.log(" [*] RECEIVED REQUEST AT: /like");
 	var username = req.body.username;
-	var id = req.body.id;
-	var remove = req.body.remove;
+	var id = req.params.id;
+	var like = req.body.like;
 	console.log("PARAMETER 'username': " + username);
 	console.log("PARAMETER 'id': " + id);
 	console.log("PARAMETER 'remove': " + remove);
-		var users = db.collection('users');
-		var items = db.collection('items');
-		var item = items.find({_id: ObjectID(id)});
-		// Locate a user with the given email and key
+	var users = db.collection('users');
+	var items = db.collection('items');
+	var item = items.find({_id: ObjectID(id)});
+
+	if(like == "true"){	
 		users.findOneAndUpdate(
 			{username: username},
 			{$push: {liked: item}},
@@ -268,15 +269,33 @@ app.post('/like', function(req, res) {
 					res.send(SUCCESS);
 				}
 				// If the object was not successfully updated, then the
-				// email or key is wrong. Notify the user.
 				else {
 					res.send({
 						status: "ERROR",
-						message: "Unable to validate user. Please contact your system administrator.",
 					});
 				}
 			}
 		);
+	}
+	else{
+                users.findOneAndUpdate(
+                        {username: username},
+                        {$pull: {liked: item}},
+                        {},
+                        function(err, response) {
+                                //console.log(response);
+                                if (response.lastErrorObject.updatedExisting){
+                                        res.send(SUCCESS);
+                                }
+                                // If the object was not successfully updated, then the
+                                else {
+                                        res.send({
+                                                status: "ERROR",
+                                        });
+                                }
+                        }
+                );
+	}		
 });
 
 app.post('/additem', function(req, res){
