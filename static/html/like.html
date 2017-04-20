@@ -33,13 +33,15 @@
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
 
 	    <script type="text/javascript">
-                function getfollowing() {
-                        var username = $("#username").val();
-                        var limit = $("#limit").val();
-                        console.log(username);
-                        console.log(limit);
-                        $.get('/user/' + username + '/following',
-                                {username: username, limit: limit},
+                function like() {
+                        var id = $("#id").val();
+                        var tf = $("#tf").val();
+
+                        console.log(id);
+                        console.log(tf);
+
+                        $.post('/item/' + id + '/like',
+                                {like: tf},
                                 function(data) {
                                         if (data.error) {
                                                 alert("ERROR: " + data.error);
@@ -63,13 +65,13 @@
     <div class="container">
 
       <form class="form-signin" action="/user/:username/followers" method="get">
-        <h2 class="form-signin-heading">Get Following</h2>
-        <label for="inputUsername" class="sr-only">Username</label>
-        <input type="content" id="username" name="username" class="form-control" placeholder="username" required autofocus>
-	<label for="inputLimit" class="sr-only">Limit</label>
-        <input type="content" id="limit" name="limit" class="form-control" placeholder="limit" required autofocus>
-	<!--<button class="btn btn-lg btn-primary btn-block" type="submit">Retrieve</button>-->
-        <input type="button" class="btn btn-lg btn-primary btn-block" onclick="getfollowing()" value="Retrieve"></input>
+        <h2 class="form-signin-heading">Like</h2>
+        <label for="inputUsername" class="sr-only">Item ID</label>
+        <input type="content" id="id" name="id" class="form-control" placeholder="Item ID" required autofocus>
+	<label for="inputTF" class="sr-only">true/false</label>
+        <input type="content" id="tf" name="tf" class="form-control" placeholder="limit" required autofocus>
+	<!--<button class="btn btn-lg btn-primary btn-block" type="submit">Like</button>-->
+        <input type="button" class="btn btn-lg btn-primary btn-block" onclick="like()" value="Retrieve"></input>
       </form>
 
     </div> <!-- /container -->

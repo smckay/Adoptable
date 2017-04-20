@@ -13,6 +13,7 @@
     "client-sessions": "^0.7.0",
     "express": "~4.14.1",
     "mongodb": "~2.2.24",
+    "mongodb": "https://github.com/mongodb/node-mongodb-native/archive/gridfs-specification.tar.gz",
     "mustache-express": "~1.2.4",
     "nodemailer": "~3.1.4",
     "path": "~0.12.7",
