@@ -9,6 +9,9 @@ var randomstring = require('randomstring');
 var session = require('client-sessions');
 
 var MongoClient = require('mongodb').MongoClient;
+var Grid = require('gridfs-stream');
+var GridStore = require('mongodb').GridStore;
+
 var ObjectID =  require('mongodb').ObjectID;
 var url = 'mongodb://localhost:27017/adoptable'
 
@@ -49,9 +52,11 @@ var SUCCESS =  {status: "OK", message: "Success"};
 var ERROR = {status: "ERROR"};
 
 var db;
+var gfs;
 MongoClient.connect(url, function(err, database) {
 	if (err) return console.log(err)
 	db = database;
+	gfs = Grid(db, MongoClient);	
 });
 
 app.get('/', function(req, res) {
@@ -248,54 +253,62 @@ app.post('/logout', function(req, res) {
 
 app.post('/item/:id/like', function(req, res) {
 	console.log(" [*] RECEIVED REQUEST AT: /like");
-	var username = req.body.username;
+
+	var username = req.session.username;
 	var id = req.params.id;
 	var like = req.body.like;
+
 	console.log("PARAMETER 'username': " + username);
 	console.log("PARAMETER 'id': " + id);
-	console.log("PARAMETER 'remove': " + remove);
+	console.log("PARAMETER 'like': " + like);
+
 	var users = db.collection('users');
 	var items = db.collection('items');
-	var item = items.find({_id: ObjectID(id)});
+	
+	//var item = items.find({_id: ObjectID(id)});
 
-	if(like == "true"){	
-		users.findOneAndUpdate(
-			{username: username},
-			{$push: {liked: item}},
-			{},
-			function(err, response) {
-				//console.log(response);
-				if (response.lastErrorObject.updatedExisting){
-					res.send(SUCCESS);
-				}
-				// If the object was not successfully updated, then the
-				else {
-					res.send({
-						status: "ERROR",
-					});
-				}
+	items.findOne(
+		{_id: ObjectID(id)},
+		function(err, response){
+			console.log(response);
+			if((like == "true" || like == true) && !err){
+				users.findOneAndUpdate(
+					{username: username},
+					{$push: {liked: response._id}},
+					{},
+					function(err, response){
+						console.log(response);
+						if(response.lastErrorObject.updatedExisting){
+							res.send(SUCCESS);
+						}
+						else{
+							res.send(ERROR);
+						}
+					}
+				);				
 			}
-		);
-	}
-	else{
-                users.findOneAndUpdate(
-                        {username: username},
-                        {$pull: {liked: item}},
-                        {},
-                        function(err, response) {
-                                //console.log(response);
-                                if (response.lastErrorObject.updatedExisting){
-                                        res.send(SUCCESS);
-                                }
-                                // If the object was not successfully updated, then the
-                                else {
-                                        res.send({
-                                                status: "ERROR",
-                                        });
-                                }
-                        }
-                );
-	}		
+			else if(!err){
+                                users.findOneAndUpdate(
+                                        {username: username},
+                                        {$pull: {liked: response._id}},
+                                        {},
+                                        function(err, response){
+                                                console.log(response);
+                                                if(response.lastErrorObject.updatedExisting){
+                                                        res.send(SUCCESS);
+                                                }
+                                                else{
+                                                        res.send(ERROR);
+                                                }
+                                        }
+                                );
+			
+			}
+			else{
+				res.send(ERROR);
+			}
+		}
+	);	
 });
 
 app.post('/additem', function(req, res){
@@ -643,6 +656,37 @@ app.delete('/item/:id', function(req, res){
 			res.send(SUCCESS);
 		}
 	});
+});
+
+app.post('/addmedia', function(req, res){
+    console.log(" [*] RECEIVED REQUEST AT: /addmedia");
+
+	var media = req.body.content;
+	//console.log(media);
+
+
+	res.send(SUCCESS);
+/*	grid.put(media, {content_type: 'image'}, function(err, fileInfo){
+		if(!err){
+			console.log("Finished writing file");
+			res.send({"status": "OK", "id": fileInfo._id,});
+		}
+		else{
+			res.send(ERROR);
+		}
+	});*/
+});
+
+app.get('/media/:id', function(req, res){
+	var id = req.params.id;
+	grid.get(id, function(err, data){
+		if(!err){
+			res.send(data);
+		}
+		else{
+			res.send(ERROR);
+		}
+	});	
 });
 
 function error_obj(err) {
