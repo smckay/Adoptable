@@ -8,9 +8,17 @@ var assert =  require('assert');
 var randomstring = require('randomstring');
 var session = require('client-sessions');
 
+var mongodb = require('mongodb');
 var MongoClient = require('mongodb').MongoClient;
 var Grid = require('gridfs-stream');
 var GridStore = require('mongodb').GridStore;
+var fs = require('fs');
+var stream = require('stream');
+var bufferStream = new stream.PassThrough();
+
+var multer = require('multer');
+var storage = multer.memoryStorage();
+var upload = multer({dest: '/uploads', storage: storage});
 
 var ObjectID =  require('mongodb').ObjectID;
 var url = 'mongodb://localhost:27017/adoptable'
@@ -52,11 +60,11 @@ var SUCCESS =  {status: "OK", message: "Success"};
 var ERROR = {status: "ERROR"};
 
 var db;
-var gfs;
+var bucket;
 MongoClient.connect(url, function(err, database) {
 	if (err) return console.log(err)
 	db = database;
-	gfs = Grid(db, MongoClient);	
+	bucket = new mongodb.GridFSBucket(db);
 });
 
 app.get('/', function(req, res) {
@@ -658,23 +666,27 @@ app.delete('/item/:id', function(req, res){
 	});
 });
 
-app.post('/addmedia', function(req, res){
+app.post('/addmedia', upload.single('content'), function(req, res){
     console.log(" [*] RECEIVED REQUEST AT: /addmedia");
 
-	var media = req.body.content;
-	//console.log(media);
+	console.log(req.file.buffer);	
 
+	bufferStream.end(req.file.buffer);
+	var buck = bucket.openUploadStream(" ");	
+	console.log(buck.id);
 
-	res.send(SUCCESS);
-/*	grid.put(media, {content_type: 'image'}, function(err, fileInfo){
-		if(!err){
-			console.log("Finished writing file");
-			res.send({"status": "OK", "id": fileInfo._id,});
-		}
-		else{
+	//fs.createReadStream('./example.jpg').
+	bufferStream.
+		pipe(buck).
+		on('error', function(error){
+			assert.ifError(error);
 			res.send(ERROR);
-		}
-	});*/
+		}).
+		on('finish', function(){
+			console.log('done!');
+			res.send({status: "OK", id: buck.id,});
+		});
+
 });
 
 app.get('/media/:id', function(req, res){
