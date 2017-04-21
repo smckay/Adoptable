@@ -8,6 +8,10 @@ var assert =  require('assert');
 var randomstring = require('randomstring');
 var session = require('client-sessions');
 
+var wait = require('wait.for');
+var async = require('asyncawait/async');
+var await = require('asyncawait/await');
+
 var mongodb = require('mongodb');
 var MongoClient = require('mongodb').MongoClient;
 var Grid = require('gridfs-stream');
@@ -427,7 +431,7 @@ app.get('/item/:item_id', function(req, res) {
 	});
 });
 
-app.post('/search', function(req, res) {
+app.post('/search', async(function (req, res) {
     console.log(" [*] RECEIVED REQUEST AT: /search");
     
     console.log(req.body.following);
@@ -436,8 +440,10 @@ app.post('/search', function(req, res) {
 	var limit = Math.min(parseInt(req.body.limit || 25), 100);
 	var q = req.body.q;
 	var username = req.body.username;
-	var following = (req.body.following == "false" || req.body.following == false) ? false : true;
+	var following = !(req.body.following == "false" || req.body.following == false);
 	var rank = req.body.rank || "interest";
+	var parent = req.body.parent;
+	var replies = !(req.body.replies == "false" || req.body.replies == false);
 
 	if (!req.session || !req.session.username) {
 		res.send(error_obj("Cannot find valid session. Please login"));
@@ -452,20 +458,34 @@ app.post('/search', function(req, res) {
 	console.log("PARAMETER 'username': " + username);
 	console.log("PARAMETER 'following': " + following);
 	console.log("PARAMETER 'rank': " + rank);
+	console.log("PARAMETER 'parent': " + parent);
+	console.log("PARAMETER 'replies': " + replies);
 
 	var query = {}
 	if (q) {
 		query.content = {$regex: ".*" + q + ".*", $options: "i"};
+	}
+	if (parent) {
+		var children = await(items.findOne{_id: parent}).children;
+		console.log(children);
+		query._id = {$in: children};
+	}
+	if (replies) {
+		query.parent = {$ne: null};
 	}
 	username_queries = [];
 	if (username) {
 		username_queries.push({username: username});
 	}
 	if (following) {
-		users_following = null;
 		users = db.collection('users');
+		var users_following = await(users.findOne({username: current_user}).following;
+		if (users_following) {
+			username_queries.push({username: {$in: users_following}});
+		}
+	}
+		/*
 		users.findOne({username: current_user}, function(err, doc) {
-			// This is asynchronous...
 			if (doc.following) {
 				username_queries.push({username: {$in: doc.following}});
 			}
@@ -497,34 +517,37 @@ app.post('/search', function(req, res) {
 		});
 		// users_following will be null here, because the query didn't finish
 	}
-	else {
-		if (username_queries.length > 0) {
-			query.username = {$and: username_queries};
-		}
-		console.log("SEARCH QUERY:\n" + JSON.stringify(query, null, 2));
-
-		var items = db.collection('items');
-		items.aggregate([
-			{$match: query},
-			{$project: 
-				{
-					id: "$_id",
-					name: 1,
-					petDescription: 1,
-					petLocation: 1,
-					username: 1,
-					timestamp: 1,
-					content: 1,
-				}
-			},
-		]).limit(limit).toArray(function(err, docs) {
-			res.send({
-				"status": "OK",
-				"items": docs || [],
-			});
-		});
+		*/
+	//else {
+	if (username_queries.length > 0) {
+		query.username = {$and: username_queries};
 	}
-});
+	console.log("SEARCH QUERY:\n" + JSON.stringify(query, null, 2));
+
+	var items = db.collection('items');
+	items.aggregate([
+		{$match: query},
+		{$project: 
+			{
+				id: "$_id",
+				name: 1,
+				petDescription: 1,
+				petLocation: 1,
+				username: 1,
+				timestamp: 1,
+				content: 1,
+				interest: {$add: [{$size: "$children"}, "$likes"]},
+			}
+		},
+		{$sort: (rank === "time" ? "$timestamp" : "$interest")},
+	]).limit(limit).toArray(function(err, docs) {
+		res.send({
+			"status": "OK",
+			"items": docs || [],
+		});
+	});
+	//}
+}));
 
 app.get('/user/:username', function(req, res){
     console.log(" [*] RECEIVED REQUEST AT: /user/username");
@@ -737,6 +760,13 @@ function error_obj(err) {
 		error: err,
 	};
 }
+
+app.get('/test2', async(function(req, res) {
+	console.log("async test2");
+	var items = db.collection('items');
+	var doc = await(items.findOne({}));
+	res.send(doc);
+}));
 
 app.listen(80, function() {
     console.log("Listening on port 80");
