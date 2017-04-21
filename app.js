@@ -324,9 +324,13 @@ app.post('/additem', function(req, res){
 	var content = req.body.content;
 	var description = req.body.petDescription;
 	var location = req.body.petLocation;
+	var parent = req.body.parent;
+	var media = req.body.media;
 	console.log("PARAMETER 'content': " + content);
 	console.log("PARAMETER 'description': " + description);
 	console.log("PARAMETER 'location': " + location);
+	console.log("PARAMETER 'parent': " + parent);
+	console.log("PARAMETER 'media': " + media);
 
 	if (!req.session || !req.session.username) {
 		res.send(error_obj("Cannot find valid session. Please login"));
@@ -335,25 +339,50 @@ app.post('/additem', function(req, res){
 
 	console.log("SESSION 'username': req.session.username");
 
-		var items = db.collection('items');
-        items.insertOne(
-    		{
-    			username: req.session.username,
-				content: content,
-				petDescription: description,
-				petLocation: location,
-				timestamp: new Date().getTime()/1000,
-			}, function(err, r) {
-				if (err != null) {
-					res.send(error_obj("Unable to add item."));
-				} else {
-					console.log("Sucessfully added item");
+	var items = db.collection('items');
+	items.insertOne(
+		{
+			username: req.session.username,
+			content: content,
+			petDescription: description,
+			petLocation: location,
+			timestamp: new Date().getTime()/1000,
+			parent: parent,
+			media: media,
+			children: [],
+		}, function(err, r) {
+			if (err != null) {
+				res.send(error_obj("Unable to add item."));
+			} else {
+				console.log("Sucessfully added item");
+				var newId = r.ops[0]._id;
+				if (!parent) {
 					res.send({
 						status: "OK",
-						id: r.ops[0]._id,
+						id: newId,
 					});
 				}
+				else {
+					items.findOneAndUpdate(
+						{_id: parent},
+						{$push: {children: newId}},
+						{},
+						function(err, response){
+							console.log(response);
+							if(response.lastErrorObject.updatedExisting){
+								res.send({
+									status: "OK",
+									id: newId,
+								});
+							}
+							else{
+								res.send(error_obj(err));
+							}
+						}
+					);
+				}
 			}
+		}
 		);
 });
 
