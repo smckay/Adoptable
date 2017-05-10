@@ -15,10 +15,11 @@ var await = require('asyncawait/await');
 var mongodb = require('mongodb');
 var MongoClient = require('mongodb').MongoClient;
 var Grid = require('gridfs-stream');
+Grid.mongo = mongodb.mongo;
 var GridStore = require('mongodb').GridStore;
 var fs = require('fs');
 var stream = require('stream');
-var bufferStream = new stream.PassThrough();
+//var bufferStream = new stream.PassThrough();
 
 var multer = require('multer');
 var storage = multer.memoryStorage();
@@ -64,11 +65,9 @@ var SUCCESS =  {status: "OK", message: "Success"};
 var ERROR = {status: "ERROR"};
 
 var db;
-var bucket;
 MongoClient.connect(url, function(err, database) {
 	if (err) return console.log(err)
 	db = database;
-	bucket = new mongodb.GridFSBucket(db);
 });
 
 app.get('/', function(req, res) {
@@ -277,50 +276,34 @@ app.post('/item/:id/like', function(req, res) {
 	var users = db.collection('users');
 	var items = db.collection('items');
 	
-	//var item = items.find({_id: ObjectID(id)});
-
-	items.findOne(
-		{_id: ObjectID(id)},
-		function(err, response){
-			console.log(response);
-			if((like == "true" || like == true) && !err){
-				users.findOneAndUpdate(
-					{username: username},
-					{$push: {liked: response._id}},
-					{},
-					function(err, response){
-						console.log(response);
-						if(response.lastErrorObject.updatedExisting){
-							res.send(SUCCESS);
-						}
-						else{
-							res.send(ERROR);
-						}
-					}
-				);				
+	if(like == "true" || like == true){
+		items.findOneAndUpdate(
+			{_id: ObjectID(id)},
+			{$push: {likes: username}},
+			function(err, response){
+				if(response.lastErrorObject.updatedExisting){
+					res.send(SUCCESS);
+				}
+				else{
+					res.send(ERROR);
+				}
 			}
-			else if(!err){
-                                users.findOneAndUpdate(
-                                        {username: username},
-                                        {$pull: {liked: response._id}},
-                                        {},
-                                        function(err, response){
-                                                console.log(response);
-                                                if(response.lastErrorObject.updatedExisting){
-                                                        res.send(SUCCESS);
-                                                }
-                                                else{
-                                                        res.send(ERROR);
-                                                }
-                                        }
-                                );
-			
-			}
-			else{
-				res.send(ERROR);
-			}
-		}
-	);	
+		);				
+	}
+	else{
+                items.findOneAndUpdate(
+                        {_id: ObjectID(id)},
+                        {$pull: {likes: username}},
+                        function(err, response){
+                                if(response.lastErrorObject.updatedExisting){
+                                        res.send(SUCCESS);
+                                }
+                                else{
+                                        res.send(ERROR);
+                                }
+                        }
+                );
+        }
 });
 
 app.post('/additem', function(req, res){
@@ -354,6 +337,7 @@ app.post('/additem', function(req, res){
 			parent: parent,
 			media: media,
 			children: [],
+			likes: [],
 		}, function(err, r) {
 			if (err != null) {
 				res.send(error_obj("Unable to add item."));
@@ -368,19 +352,22 @@ app.post('/additem', function(req, res){
 				}
 				else {
 					items.findOneAndUpdate(
-						{_id: parent},
+						{_id: ObjectID(parent)},
 						{$push: {children: newId}},
 						{},
 						function(err, response){
 							console.log(response);
-							if(response.lastErrorObject.updatedExisting){
+							if (err || !response) {
+								res.send(error_obj(err));
+							}
+							else if(response.lastErrorObject.updatedExisting){
 								res.send({
 									status: "OK",
 									id: newId,
 								});
 							}
 							else{
-								res.send(error_obj(err));
+								res.send(error_obj("Could not find/update doc"));
 							}
 						}
 					);
@@ -466,12 +453,12 @@ app.post('/search', async(function (req, res) {
 		query.content = {$regex: ".*" + q + ".*", $options: "i"};
 	}
 	if (parent) {
-		var children = await(items.findOne{_id: parent}).children;
+		var children = await(items.findOne({_id: parent})).children;
 		console.log(children);
 		query._id = {$in: children};
 	}
-	if (replies) {
-		query.parent = {$ne: null};
+	if (!replies) {
+		query.parent = null;
 	}
 	username_queries = [];
 	if (username) {
@@ -479,54 +466,23 @@ app.post('/search', async(function (req, res) {
 	}
 	if (following) {
 		users = db.collection('users');
-		var users_following = await(users.findOne({username: current_user}).following;
+		var users_following = await(users.findOne({username: current_user})).following;
 		if (users_following) {
 			username_queries.push({username: {$in: users_following}});
 		}
 	}
-		/*
-		users.findOne({username: current_user}, function(err, doc) {
-			if (doc.following) {
-				username_queries.push({username: {$in: doc.following}});
-			}
-			if (username_queries.length > 0) {
-				query.username = {$and: username_queries};
-			}
-			console.log("SEARCH QUERY:\n" + JSON.stringify(query, null, 2));
-
-			var items = db.collection('items');
-			items.aggregate([
-				{$match: query},
-				{$project: 
-					{
-						id: "$_id",
-						name: 1,
-						petDescription: 1,
-						petLocation: 1,
-						username: 1,
-						timestamp: 1,
-						content: 1,
-					}
-				},
-			]).limit(limit).toArray(function(err, docs) {
-				res.send({
-					"status": "OK",
-					"items": docs || [],
-				});
-			});
-		});
-		// users_following will be null here, because the query didn't finish
-	}
-		*/
-	//else {
 	if (username_queries.length > 0) {
 		query.username = {$and: username_queries};
 	}
 	console.log("SEARCH QUERY:\n" + JSON.stringify(query, null, 2));
 
+	var sort = rank === "time" ? {"time": 1} : {"interest": -1};
+	console.log(sort);
+
 	var items = db.collection('items');
 	items.aggregate([
 		{$match: query},
+		{$limit: limit}, 
 		{$project: 
 			{
 				id: "$_id",
@@ -536,11 +492,18 @@ app.post('/search', async(function (req, res) {
 				username: 1,
 				timestamp: 1,
 				content: 1,
-				interest: {$add: [{$size: "$children"}, "$likes"]},
+				interest: {$add: [{$size: "$children"}, {$size: "$likes"}]},
 			}
 		},
-		{$sort: (rank === "time" ? "$timestamp" : "$interest")},
-	]).limit(limit).toArray(function(err, docs) {
+		//{$sort: sort},
+	]).toArray(function(err, docs) {
+		docs = docs || [];
+		// Manually sort the list, because the pipeline stage for some reason
+		// always sorts ascending instead of descensing
+		var key = rank === "time" ? "timestamp" : "interest";
+		docs.sort(function(a,b) {
+			return b[key] - a[key];
+		});
 		res.send({
 			"status": "OK",
 			"items": docs || [],
@@ -681,6 +644,7 @@ app.get('/user/:username/followers', function(req, res){
 });
 
 app.get('/user/:username/following', function(req, res){
+	console.log(" [*] RECEIVED REQUEST AT: /user/:username/following");
 	var username = req.params.username;
 	var limit = Math.min(parseInt(req.body.limit || 50), 200);
 	var users = db.collection('users');
@@ -704,24 +668,39 @@ app.get('/user/:username/following', function(req, res){
 });
 
 app.delete('/item/:id', function(req, res){
+	console.log(" [*] RECEIVED REQUEST AT: delete item");
+
 	var id = req.params.id;
 
 	var items = db.collection('items');
-	items.remove({_id: ObjectID(id)}, function(err, result) {
-		if (err || !result) {
+	items.findOne({_id: ObjectID(id)}, function(err, result){
+		var media = result.media;
+		if(err || !result){
 			res.send(error_obj(err));
-		} else if (result.result.n == 0) {
-			res.send(error_obj("No elements with that ID"));
-		} else {
-			res.send(SUCCESS);
 		}
+		else{
+        		items.remove({_id: ObjectID(id)}, function(err, result) {
+                		console.log(result);
+               		 	if (err || !result) {
+                			res.send(error_obj(err));
+              			 } else if (result.result.n == 0) {
+                        		res.send(error_obj("No elements with that ID"));
+                		} else {
+					if(media){deleteMedia(media);}
+                        		res.send(SUCCESS);
+                		}
+        		});
+		}		
 	});
+
 });
 
 app.post('/addmedia', upload.single('content'), function(req, res){
     console.log(" [*] RECEIVED REQUEST AT: /addmedia");
 
 	console.log(req.file.buffer);	
+	var bufferStream = new stream.PassThrough();
+	var bucket = new mongodb.GridFSBucket(db);
 
 	bufferStream.end(req.file.buffer);
 	var buck = bucket.openUploadStream(" ");	
@@ -742,15 +721,52 @@ app.post('/addmedia', upload.single('content'), function(req, res){
 });
 
 app.get('/media/:id', function(req, res){
-	var id = req.params.id;
-	grid.get(id, function(err, data){
-		if(!err){
-			res.send(data);
-		}
-		else{
+	console.log(" [*] RECEIVED REQUEST AT: /getmedia");
+
+	var bucket = new mongodb.GridFSBucket(db);
+        var id = req.params.id;
+
+	var files = db.collection('fs.files');
+
+	files.findOne({_id: ObjectID(id)}, function(err, doc){
+		if(!doc){
+			console.log("MEDIA NOT FOUND");
 			res.send(ERROR);
 		}
-	});	
+		else{
+			console.log("Retrieving media...");
+			res.writeHead(200, {'Content-Type': 'image',});
+			var media = bucket.openDownloadStream(ObjectID(id));
+			media.pipe(res).on('error', function(error){
+				console.log("error retrieving");
+				res.send(ERROR);
+			});
+		}
+	});
+
+	/*var id = req.params.id;
+	console.log(" [*] PARAMETER 'id': " + id);
+
+	var gfs = Grid(db);
+	gfs.files.find({_id: ObjectId(id)}).toArray(function (err, files) {
+		if (err) {
+			res.json(err);
+		}
+		if (files.length > 0) {
+			res.set('Content-Type', 'image');
+			var stream = gfs.createReadStream({_id: ObjectID(id)});
+			stream.pipe(res);
+			stream.on('finish', function() {
+				res.end();
+			});
+		} else {
+			res.json(error_obj("Cannot find file with id '" + id + "'"));
+		}
+	});*/
+	
+
+
+	
 });
 
 function error_obj(err) {
@@ -759,6 +775,16 @@ function error_obj(err) {
 		status: "error",
 		error: err,
 	};
+}
+
+function deleteMedia(media){
+	var bucket = new mongodb.GridFSBucket(db);
+	for(i = 0; i < media.length; i++){
+		var id = media[i];
+		bucket.delete(ObjectID(id), function(error){
+			console.log("error deleting media");
+		});
+	}
 }
 
 app.get('/test2', async(function(req, res) {

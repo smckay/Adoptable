@@ -1,0 +1,9 @@
+- Milestone 2
+- Milestone 3
+- Migrate to AWS
+- Sharding and replication
+- Load balancing
+- Logging server
+-- Printing is synchronous and makes the server slower. By moving this to a
+   separate server, we can speed up requests
+- Move database code to a separate file/server
