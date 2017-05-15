@@ -189,7 +189,6 @@ app.post('/verify', async(function(req, res) {
 		{$set: {verified: true}},
 		{},
 		function(err, response) {
-			console.log(err);
 		    if (err) {
 			res.send(error_obj(__line + "--" + err));
 		    }
