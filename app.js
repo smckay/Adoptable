@@ -66,9 +66,11 @@ var SUCCESS =  {status: "OK", message: "Success"};
 var ERROR = {status: "ERROR"};
 
 var db;
+var bucket;
 MongoClient.connect(url, function(err, database) {
 	if (err) return console.log(err)
 	db = database;
+	bucket = new mongodb.GridFSBucket(db);
 });
 
 app.get('/', function(req, res) {
@@ -190,7 +192,6 @@ app.post('/verify', async(function(req, res) {
 		{$set: {verified: true}},
 		{},
 		function(err, response) {
-			console.log(err);
 		    if (err) {
 			res.send(error_obj(__line + "--" + err));
 		    }
@@ -715,7 +716,6 @@ app.post('/addmedia', upload.single('content'), function(req, res){
 
 	//console.log(req.file.buffer);	
 	var bufferStream = new stream.PassThrough();
-	var bucket = new mongodb.GridFSBucket(db);
 
 	bufferStream.end(req.file.buffer);
 	var buck = bucket.openUploadStream(" ");	
@@ -737,7 +737,6 @@ app.post('/addmedia', upload.single('content'), function(req, res){
 app.get('/media/:id', function(req, res){
 	console.log(" [*] RECEIVED REQUEST AT: /getmedia");
 
-	var bucket = new mongodb.GridFSBucket(db);
         var id = req.params.id;
 
 	var files = db.collection('fs.files');
@@ -793,7 +792,6 @@ function error_obj(err) {
 }
 
 function deleteMedia(media){
-	var bucket = new mongodb.GridFSBucket(db);
 	for(i = 0; i < media.length; i++){
 		var id = media[i];
 		bucket.delete(ObjectID(id), function(error){
