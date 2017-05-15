@@ -45,7 +45,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'static')));
 app.use(session({
 	cookieName: 'session',
-	secret: randomstring.generate(),
+	//secret: randomstring.generate(),
+	secret: 'cse356',
 	duration: 30 * 60 * 1000,
 	activeDuration: 5 * 60 * 1000,
 }));
