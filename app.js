@@ -232,13 +232,13 @@ app.post('/login', function(req, res) {
 
         var username = req.body.username;
         var password = req.body.password;
-        console.log("PARAMETER 'username': " + username);
-        console.log("PARAMETER 'password': " + password);
+        //console.log("PARAMETER 'username': " + username);
+        //console.log("PARAMETER 'password': " + password);
 
                 var users = db.collection('users');
 
                 users.findOne({username: username, password: password}, function(err, result) {
-                	console.log(result);
+          //      	console.log(result);
 					if (err) {
 						res.send(error_obj("Could not query database."));
 					}
@@ -318,6 +318,9 @@ app.post('/additem', function(req, res){
 	console.log("PARAMETER 'location': " + location);
 	console.log("PARAMETER 'parent': " + parent);
 	console.log("PARAMETER 'media': " + media);
+
+	// DELETE THIS
+	//req.session.username = "meme";
 
 	if (!req.session || !req.session.username) {
 		res.send(error_obj("Cannot find valid session. Please login"));
@@ -504,6 +507,7 @@ app.post('/search', async(function (req, res) {
 		docs.sort(function(a,b) {
 			return b[key] - a[key];
 		});
+		console.log(docs);
 		res.send({
 			"status": "OK",
 			"items": docs || [],
