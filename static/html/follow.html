@@ -9,7 +9,7 @@
     <meta name="author" content="">
     <link rel="icon" href="../../favicon.ico">
 
-    <title>Login</title>
+    <title>Follow</title>
 
     <!-- Bootstrap core CSS -->
     <link href="../css/bootstrap.min.css" rel="stylesheet">
@@ -23,11 +23,15 @@
     <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
     <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
     <script src="../js/ie-emulation-modes-warning.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="/js/follow.js"></script>
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
       <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+
+
     <![endif]-->
     
   </head>
@@ -36,13 +40,13 @@
 
     <div class="container">
 
-      <form class="form-signin" action="/follow" method="post">
+      <form class="form-signin" id="myform">
         <h2 class="form-signin-heading">Follow</h2>
-        <label for="inputUsername" class="sr-only">username</label>
-        <input type="username" id="username" class="form-control" name="username" placeholder="Username" required autofocus>
+        <label for="inputUsername" id="username" class="sr-only">username</label>
+        <input type="username" class="form-control" name="username" placeholder="Username" required autofocus>
         <label for="inputFollow" class="sr-only">follow</label>
         <input type="follow" id="follow" class="form-control" placeholder="follow? (true/false)" name="follow" required autofocus>
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+        <button class="btn btn-lg btn-primary btn-block" onclick="follow2()">Follow</button>
       </form>
 
     </div> <!-- /container -->
