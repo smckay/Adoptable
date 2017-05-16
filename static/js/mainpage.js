@@ -5,11 +5,10 @@ $(document).ready(function() {
 
 	var newTweet = document.createElement('button');
 	newTweet.setAttribute('id', 'one');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[0].content);
         $('#tweets').append(newTweet);
         $('#one').html('' + items[0].username + ': ' + items[0].content);
-	$('#tweets').append('<br/>');
-	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
@@ -17,12 +16,10 @@ $(document).ready(function() {
 
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'two');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[1].content);
         $('#tweets').append(newTweet);
         $('#two').html('' + items[1].username + ': ' + items[1].content);
-	$('#tweets').append('<br/>');
-	$('#tweets').append('<br/>');
-	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
@@ -30,11 +27,10 @@ $(document).ready(function() {
 
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'three');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[2].content);
         $('#tweets').append(newTweet);
         $('#three').html('' + items[2].username + ': ' + items[2].content);
-	$('#tweets').append('<br/>');
-	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
 	$('#tweets').append('<br/>');
@@ -42,11 +38,10 @@ $(document).ready(function() {
 	
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'four');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[3].content);
         $('#tweets').append(newTweet);
         $('#four').html('' + items[3].username + ': ' + items[3].content);
-        $('#tweets').append('<br/>');
-        $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
@@ -54,11 +49,10 @@ $(document).ready(function() {
 
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'five');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[4].content);
         $('#tweets').append(newTweet);
         $('#five').html('' + items[4].username + ': ' + items[4].content);
-        $('#tweets').append('<br/>');
-        $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
@@ -66,11 +60,10 @@ $(document).ready(function() {
 
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'six');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[5].content);
         $('#tweets').append(newTweet);
         $('#six').html('' + items[5].username + ': ' + items[5].content);
-        $('#tweets').append('<br/>');
-        $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
@@ -79,10 +72,9 @@ $(document).ready(function() {
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'seven');
         console.log(items[6].content);
+	newTweet.setAttribute('class', 'btn btn-primary');
         $('#tweets').append(newTweet);
         $('#seven').html('' + items[6].username + ': ' + items[6].content);
-        $('#tweets').append('<br/>');
-        $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
@@ -90,11 +82,10 @@ $(document).ready(function() {
 
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'eight');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[7].content);
         $('#tweets').append(newTweet);
         $('#eight').html('' + items[7].username + ': ' + items[7].content);
-        $('#tweets').append('<br/>');
-        $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
@@ -102,11 +93,10 @@ $(document).ready(function() {
 
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'nine');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[8].content);
         $('#tweets').append(newTweet);
         $('#nine').html('' + items[8].username + ': ' + items[8].content);
-        $('#tweets').append('<br/>');
-        $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
@@ -114,11 +104,10 @@ $(document).ready(function() {
 
         newTweet = document.createElement('button');
         newTweet.setAttribute('id', 'ten');
+	newTweet.setAttribute('class', 'btn btn-primary');
         console.log(items[9].content);
         $('#tweets').append(newTweet);
         $('#ten').html('' + items[9].username + ': ' + items[9].content);
-        $('#tweets').append('<br/>');
-        $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
         $('#tweets').append('<br/>');
