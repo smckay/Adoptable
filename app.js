@@ -45,7 +45,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'static')));
 app.use(session({
 	cookieName: 'session',
-	secret: randomstring.generate(),
+	//secret: randomstring.generate(),
+	secret: 'cse356',
 	duration: 30 * 60 * 1000,
 	activeDuration: 5 * 60 * 1000,
 }));
@@ -65,16 +66,18 @@ var SUCCESS =  {status: "OK", message: "Success"};
 var ERROR = {status: "ERROR"};
 
 var db;
+var bucket;
 MongoClient.connect(url, function(err, database) {
 	if (err) return console.log(err)
 	db = database;
+	bucket = new mongodb.GridFSBucket(db);
 });
 
 app.get('/', function(req, res) {
 //    MongoClient.connect(url, function(err, db) {
 /*
                 if (err) {
-                	res.send(error_obj(err));
+                	res.send(error_obj(__line + "--" + err));
                 	return;
                 }
                 */
@@ -170,7 +173,7 @@ app.post('/adduser', function(req, res) {
         });
 });
 
-app.post('/verify', function(req, res) {
+app.post('/verify', async(function(req, res) {
     console.log(" [*] RECEIVED REQUEST AT: /verify");
     var email = req.body.email;
     var key = req.body.key;
@@ -180,26 +183,36 @@ app.post('/verify', function(req, res) {
 
 	// If the backdoor was passed in, then automatically verify the user
 	if (key == BACKDOOR) {
-		console.log("backdoor received");
-			console.log("Connected to MongoDB server");
-			var users = db.collection('users');
-			users.findOneAndUpdate(
-				{email:email},
-				{$set: {verified: true}},
-				{},
-				function(err, response) {
-					if (response.lastErrorObject.updatedExisting){
-						req.session.username = response.value.username;
-						res.send(SUCCESS);
-					}
-					else {
-						res.send({
-							status: "ERROR",
-							message: "Failed to verify user. Please contact system administrator.",
-						});
-					}
-				}
-			);
+	    console.log("backdoor received");
+	    console.log("Connected to MongoDB server");
+	    var users = db.collection('users');
+	    var username = await(users.findOne({email: email})).username;
+	    users.findOneAndUpdate(
+		{email:email, username:username},
+		{$set: {verified: true}},
+		{},
+		function(err, response) {
+		    if (err) {
+			res.send(error_obj(__line + "--" + err));
+		    }
+		    else if (!response) {
+			res.send(error_obj(__line + "--" + "Failed to verify user. Please contact system administrator."));
+			return;
+		    }
+      		    else if (response.lastErrorObject.updatedExisting){
+	    	        req.session.username = response.value.username;
+			res.send(SUCCESS);
+			return;
+	            }
+		    else {
+			res.send({
+			    status: "ERROR",
+			    message: "Failed to verify user. Please contact system administrator.",
+			});
+			return;
+		    }
+		}
+	    );
 	}
 	// If the backdoor was not used, verify normally
 	else {
@@ -219,40 +232,40 @@ app.post('/verify', function(req, res) {
 					// If the object was not successfully updated, then the
 					// email or key is wrong. Notify the user.
 					else {
-						res.send(error_obj("Unable to validate user. Please contact your system administrator."));
+						res.send(error_obj(__line + "--" + "Unable to validate user. Please contact your system administrator."));
 					}
 				}
 			);
 	}
-});
+}));
 
 
 app.post('/login', function(req, res) {
         console.log(" [*] RECEIVED REQUEST AT: /login");
 
-        var username = req.body.username;
-        var password = req.body.password;
-        //console.log("PARAMETER 'username': " + username);
-        //console.log("PARAMETER 'password': " + password);
 
-                var users = db.collection('users');
+	var username = req.body.username;
+	var password = req.body.password;
+	console.log("PARAMETER 'username': " + username);
+	console.log("PARAMETER 'password': " + password);
 
-                users.findOne({username: username, password: password}, function(err, result) {
-          //      	console.log(result);
-					if (err) {
-						res.send(error_obj("Could not query database."));
-					}
-					else if (!result) {
-						res.send(error_obj("Incorrect username or password."));
-					}
-					else if (!result.verified) {
-						res.send(error_obj("Not verified"));
-					}
-					else {
-						req.session.username = username;
-						res.send(SUCCESS);
-					}
-                });
+	var users = db.collection('users');
+	users.findOne({username: username, password: password}, function(err, result) {
+		console.log(result);
+		if (err) {
+			res.send(error_obj(__line + "--" + "Could not query database."));
+		}
+		else if (!result) {
+			res.send(error_obj(__line + "--" + "Incorrect username or password."));
+		}
+		else if (!result.verified) {
+			res.send(error_obj(__line + "--" + "Not verified"));
+		}
+		else {
+			req.session.username = username;
+			res.send(SUCCESS);
+		}
+	});
 
 });
 
@@ -323,7 +336,7 @@ app.post('/additem', function(req, res){
 	//req.session.username = "meme";
 
 	if (!req.session || !req.session.username) {
-		res.send(error_obj("Cannot find valid session. Please login"));
+		res.send(error_obj(__line + "--" + "Cannot find valid session. Please login"));
 		return;
 	}
 
@@ -342,8 +355,8 @@ app.post('/additem', function(req, res){
 			children: [],
 			likes: [],
 		}, function(err, r) {
-			if (err != null) {
-				res.send(error_obj("Unable to add item."));
+			if (err) {
+				res.send(error_obj(__line + "--" + "Unable to add item."));
 			} else {
 				console.log("Sucessfully added item");
 				var newId = r.ops[0]._id;
@@ -361,7 +374,7 @@ app.post('/additem', function(req, res){
 						function(err, response){
 							console.log(response);
 							if (err || !response) {
-								res.send(error_obj(err));
+								res.send(error_obj(__line + "--" + err));
 							}
 							else if(response.lastErrorObject.updatedExisting){
 								res.send({
@@ -370,7 +383,7 @@ app.post('/additem', function(req, res){
 								});
 							}
 							else{
-								res.send(error_obj("Could not find/update doc"));
+								res.send(error_obj(__line + "--" + "Could not find/update doc"));
 							}
 						}
 					);
@@ -386,10 +399,10 @@ app.get('/item', function(req, res){
 	var items = db.collection('items');
 	items.find({id: id}, function(err, docs) {
 		if (err) {
-			res.send(error_obj(err));
+			res.send(error_obj(__line + "--" + err));
 		}
 		else if(!docs || docs.length == 0) {
-			res.send(error_obj("Cannot find item with that ID"));
+			res.send(error_obj(__line + "--" + "Cannot find item with that ID"));
 		}
 		else {
 			res.send({
@@ -410,10 +423,10 @@ app.get('/item/:item_id', function(req, res) {
 	var items = db.collection('items');
 	items.find({_id: ObjectID(item_id)}).toArray(function(err, docs) {
 		if (err) {
-			res.send( error_obj(error));
+			res.send( error_obj(__line + "--" + error));
 		}
 		else if (!docs || docs.length == 0) {
-			res.send( error_obj("Cannot find pet with id " + item_id));
+			res.send( error_obj(__line + "--" + "Cannot find pet with id " + item_id));
 		}
 		else {
 			res.send( {status: "OK", item: docs[0]});
@@ -436,7 +449,7 @@ app.post('/search', async(function (req, res) {
 	var replies = !(req.body.replies == "false" || req.body.replies == false);
 
 	if (!req.session || !req.session.username) {
-		res.send(error_obj("Cannot find valid session. Please login"));
+		res.send(error_obj(__line + "--" + "Cannot find valid session. Please login"));
 		return;
 	}
 	var current_user = req.session.username;
@@ -527,7 +540,7 @@ app.get('/user/:username', function(req, res){
 		{username: username},
 		function(err, doc) {
 			if (err) {
-				res.send( error_obj(error));
+				res.send( error_obj(__line + "--" + error));
 			}
 			res.send( {"status": "OK", "user": {"email": doc.email, "followers":doc.followers.length, "following":doc.following.length,}});
 		}
@@ -539,7 +552,7 @@ app.post('/follow', function(req, res){
     console.log(" [*] RECEIVED REQUEST AT: /follow");
 
 	if (!req.session || !req.session.username) {
-		res.send(error_obj("No valid session found. Please login."));
+		res.send(error_obj(__line + "--" + "No valid session found. Please login."));
 		return;
 	}
 	var username = req.session.username;
@@ -563,7 +576,7 @@ app.post('/follow', function(req, res){
 				if(response.lastErrorObject.updatedExisting){
 				}
 				else{
-					res.send(error_obj(err));
+					res.send(error_obj(__line + "--" + err));
 				}
 			}
 		);
@@ -577,7 +590,7 @@ app.post('/follow', function(req, res){
 					res.send(SUCCESS);
 				}
 				else{
-					res.send(error_obj(err));
+					res.send(error_obj(__line + "--" + err));
 				}
 			}
 		);
@@ -637,7 +650,7 @@ app.get('/user/:username/followers', function(req, res){
 		function(err, docs){
 			console.log(docs.followers);
 			if(err){
-				res.send(error_obj(error));
+				res.send(error_obj(__line + "--" + error));
 			}
 			res.send({     
 				"status": "OK",
@@ -661,7 +674,7 @@ app.get('/user/:username/following', function(req, res){
 		function(err, docs){
 			console.log(docs.following);
 			if(err){
-				res.send(error_obj(error));
+				res.send(error_obj(__line + "--" + error));
 			}
 			res.send({
 				"status": "OK",
@@ -678,17 +691,21 @@ app.delete('/item/:id', function(req, res){
 
 	var items = db.collection('items');
 	items.findOne({_id: ObjectID(id)}, function(err, result){
-		var media = result.media;
-		if(err || !result){
-			res.send(error_obj(err));
+		if (err) {
+			res.send(error_obj(__line + "--" + err));
+			return;
+		} else if (!result) {
+			res.send(error_obj(__line + "--" + "Cannot find item"));
+			return;
 		}
 		else{
+			var media = result.media;
         		items.remove({_id: ObjectID(id)}, function(err, result) {
                 		console.log(result);
                		 	if (err || !result) {
-                			res.send(error_obj(err));
+                			res.send(error_obj(__line + "--" + err));
               			 } else if (result.result.n == 0) {
-                        		res.send(error_obj("No elements with that ID"));
+                        		res.send(error_obj(__line + "--" + "No elements with that ID"));
                 		} else {
 					if(media){deleteMedia(media);}
                         		res.send(SUCCESS);
@@ -702,9 +719,8 @@ app.delete('/item/:id', function(req, res){
 app.post('/addmedia', upload.single('content'), function(req, res){
     console.log(" [*] RECEIVED REQUEST AT: /addmedia");
 
-	console.log(req.file.buffer);	
+	//console.log(req.file.buffer);	
 	var bufferStream = new stream.PassThrough();
-	var bucket = new mongodb.GridFSBucket(db);
 
 	bufferStream.end(req.file.buffer);
 	var buck = bucket.openUploadStream(" ");	
@@ -714,11 +730,10 @@ app.post('/addmedia', upload.single('content'), function(req, res){
 	bufferStream.
 		pipe(buck).
 		on('error', function(error){
-			assert.ifError(error);
-			res.send(ERROR);
+			//assert.ifError(error);
+			res.send(error_obj(__line + "--" + error));
 		}).
 		on('finish', function(){
-			console.log('done!');
 			res.send({status: "OK", id: buck.id,});
 		});
 
@@ -727,7 +742,6 @@ app.post('/addmedia', upload.single('content'), function(req, res){
 app.get('/media/:id', function(req, res){
 	console.log(" [*] RECEIVED REQUEST AT: /getmedia");
 
-	var bucket = new mongodb.GridFSBucket(db);
         var id = req.params.id;
 
 	var files = db.collection('fs.files');
@@ -764,7 +778,7 @@ app.get('/media/:id', function(req, res){
 				res.end();
 			});
 		} else {
-			res.json(error_obj("Cannot find file with id '" + id + "'"));
+			res.json(error_obj(__line + "--" + "Cannot find file with id '" + id + "'"));
 		}
 	});*/
 	
@@ -775,6 +789,7 @@ app.get('/media/:id', function(req, res){
 
 function error_obj(err) {
 	console.log(err);
+	fs.writeFile("log.txt", err);
 	return {
 		status: "error",
 		error: err,
@@ -782,7 +797,6 @@ function error_obj(err) {
 }
 
 function deleteMedia(media){
-	var bucket = new mongodb.GridFSBucket(db);
 	for(i = 0; i < media.length; i++){
 		var id = media[i];
 		bucket.delete(ObjectID(id), function(error){
@@ -791,12 +805,31 @@ function deleteMedia(media){
 	}
 }
 
-app.get('/test2', async(function(req, res) {
-	console.log("async test2");
-	var items = db.collection('items');
-	var doc = await(items.findOne({}));
-	res.send(doc);
-}));
+Object.defineProperty(global, '__stack', {
+	get: function() {
+		var orig = Error.prepareStackTrace;
+		Error.prepareStackTrace = function(_, stack) {
+			return stack;
+		};
+		var err = new Error;
+		Error.captureStackTrace(err, arguments.callee);
+		var stack = err.stack;
+		Error.prepareStackTrace = orig;
+		return stack;
+	}
+});
+
+Object.defineProperty(global, '__line', {
+	get: function() {
+		return __stack[1].getLineNumber();
+	}
+});
+
+Object.defineProperty(global, '__function', {
+	get: function() {
+		return __stack[1].getFunctionName();
+	}
+});
 
 app.listen(80, function() {
     console.log("Listening on port 80");
